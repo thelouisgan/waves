@@ -17,6 +17,7 @@ let package = Package(
             name: "waves",
             targets: ["AppModule"],
             bundleIdentifier: "com.ganlouis.waves",
+            teamIdentifier: "W6ZP3G9BBF",
             displayVersion: "1.0",
             bundleVersion: "1",
             appIcon: .placeholder(icon: .note),

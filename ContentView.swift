@@ -11,11 +11,13 @@ struct ContentView: View {
     var body: some View {
         
         
-        if let fileURL = Bundle.main.url(forResource: "Piano", withExtension: "wav", subdirectory: "Sounds") {
+        
+        
+        /*if let fileURL = Bundle.main.url(forResource: "Piano", withExtension: "wav", subdirectory: "Sounds") {
             Text("File found at \(fileURL)")
         } else {
             Text("Not found")
-        }/*
+        }
         
         var bundleFiles: [String] {
             guard let bundlePath = Bundle.main.resourcePath,
@@ -35,11 +37,12 @@ struct ContentView: View {
         
         
         VStack {
-
+            
             KeySelector()
             InstrumentEXSView()
         }
     }
+    
     
     
     /*var body: some View {
@@ -52,3 +55,26 @@ struct ContentView: View {
      }*/
 }
 
+/*
+class Records: ObservableObject {
+    @Published var startTime: Date?
+    @Published var pitchNote: [Int] = []
+    @Published var timeElapsed: Double?
+    @Published var noteState: Bool?
+    
+    func startRecording() {
+        startTime = Date()
+    }
+    
+    func stopRecording() {
+        startTime = nil
+    }
+    
+    func addRecord(keyPress: [Int], state: Bool) {
+        guard let startTime = startTime else { return }
+        let timestamp = Date().timeIntervalSince(startTime)
+        timeElapsed = timestamp
+        pitchNote = keyPress
+        noteState = state
+    }
+}*/
