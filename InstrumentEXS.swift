@@ -4,6 +4,10 @@ import SwiftUI
 import Keyboard
 import Tonic
 
+protocol InstrumentEXSDelegate {
+    func toggle()
+}
+
 class InstrumentEXSConductor: ObservableObject {
     @Published var conductor = Conductor()
     @Published var currentPitch: Pitch?
@@ -12,6 +16,13 @@ class InstrumentEXSConductor: ObservableObject {
     @Published var pitchNote: Pitch?
     @Published var timeElapsed: Double?
     @Published var noteState: Bool?
+    
+    var delegate: InstrumentEXSDelegate?
+    
+    private var timer: Timer = Timer()
+    private var secondsElapsed = 0
+    
+    private var RecordingsArray: [Recordings] = []
     
     let midi = MIDI()
 
@@ -29,22 +40,43 @@ class InstrumentEXSConductor: ObservableObject {
     
     func startRecording() {
         startTime = Date()
+        timer.invalidate()
+        
+        DispatchQueue.main.async {
+            self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
+                self.secondsElapsed = self.secondsElapsed + 1
+                print(self.secondsElapsed)
+                if self.secondsElapsed >= 10 {
+                    timer.invalidate()
+                    print("counting done")
+                    self.stopRecording()
+                }
+            }
+        }
     }
     
     func stopRecording() {
         startTime = nil
+        secondsElapsed = 0
+        delegate?.toggle()
+        print("recording done")
+        for note in RecordingsArray {
+            print("Time Elapsed: \(note.timeElapsed), Pitch Note: \(note.pitchNote), Note State: \(note.noteState ? "On" : "Off")")
+        }
+        
     }
     
     func addRecord(keyPress: Pitch, state: Bool) {
         guard let startTime = startTime else { return }
         let timestamp = Date().timeIntervalSince(startTime)
-        timeElapsed = timestamp
-        pitchNote = keyPress
-        noteState = state
+        
         //print("timeElapsed: \(timeElapsed), pitchNote: \(pitchNote), noteState: \(noteState)")
-        print(timeElapsed!)
+        /*print(timeElapsed!)
         print(pitchNote!)
-        print(noteState!)
+        print(noteState!)*/
+        
+        let note = Recordings(startTime: startTime, timeElapsed: timestamp, pitchNote: keyPress, noteState: state)
+        RecordingsArray.append(note)
     }
 
     init() {
@@ -76,12 +108,16 @@ class InstrumentEXSConductor: ObservableObject {
     }
 }
 
-struct InstrumentEXSView: View {
+struct InstrumentEXSView: View, InstrumentEXSDelegate {
     @StateObject var instrumentEXSConductor = InstrumentEXSConductor()
     @Environment(\.scenePhase) var scenePhase
     @Environment(\.colorScheme) var colorScheme
     @State private var isRecording = false
     var backgroundMode = true // This variable controls the background audio state. Your users might want to disable it to save on battery usage.
+    
+    func toggle() {
+        isRecording.toggle()
+    }
     
     var body: some View {
         VStack {
@@ -178,6 +214,7 @@ struct InstrumentEXSView: View {
     
     func toggleRecording() {
         isRecording.toggle()
+        print("Toggle")
         if isRecording {
             instrumentEXSConductor.startRecording()
         } else {
@@ -214,9 +251,24 @@ extension InstrumentEXSConductor: MIDIListener {
     func receivedMIDINotification(notification: MIDINotification) { }
 }
 
-
 struct InstrumentEXSView_Previews: PreviewProvider {
     static var previews: some View {
         InstrumentEXSView()
     }
 }
+
+class Recordings {
+    var startTime: Date
+    var pitchNote: Pitch
+    var timeElapsed: Double
+    var noteState: Bool
+    
+    init(startTime: Date, timeElapsed: Double, pitchNote: Pitch, noteState: Bool) {
+        self.startTime = startTime
+        self.pitchNote = pitchNote
+        self.timeElapsed = timeElapsed
+        self.noteState = noteState
+    }
+}
+
+
