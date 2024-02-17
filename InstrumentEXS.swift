@@ -22,7 +22,7 @@ class InstrumentEXSConductor: ObservableObject {
     private var timer: Timer = Timer()
     private var secondsElapsed = 0
     
-    private var RecordingsArray: [Recordings] = []
+    var RecordingsArray: [Recordings] = []
     
     let midi = MIDI()
 
@@ -38,6 +38,8 @@ class InstrumentEXSConductor: ObservableObject {
         addRecord(keyPress: pitch, state: false)
     }
     
+    var instrumentEXSViewReference: InstrumentEXSView?
+    
     func startRecording() {
         startTime = Date()
         timer.invalidate()
@@ -50,6 +52,7 @@ class InstrumentEXSConductor: ObservableObject {
                     timer.invalidate()
                     print("counting done")
                     self.stopRecording()
+                    self.instrumentEXSViewReference?.toggleRecording()
                 }
             }
         }
@@ -60,6 +63,7 @@ class InstrumentEXSConductor: ObservableObject {
         secondsElapsed = 0
         delegate?.toggle()
         print("recording done")
+        // stopRecording is called twice
         for note in RecordingsArray {
             print("Time Elapsed: \(note.timeElapsed), Pitch Note: \(note.pitchNote), Note State: \(note.noteState ? "On" : "Off")")
         }
@@ -106,6 +110,45 @@ class InstrumentEXSConductor: ObservableObject {
         conductor.engine.stop()
         midi.closeAllInputs()
     }
+    
+    func playRecording() {
+        // Implement logic to play the recorded notes
+        // conductor.instrument.play(noteNumber: MIDINoteNumber(60), velocity: 90, channel: 0)
+
+        var currentTime: Double = 0.0
+        var currentIndex: Int = 0
+
+        let startTime = Date().timeIntervalSince1970  // Capture the starting time
+
+        let playbackChannel: MIDIChannelNumber = 1  // Choose a specific MIDI channel for playback
+
+        while currentIndex < RecordingsArray.count {
+            let recording = RecordingsArray[currentIndex]
+
+            // Calculate the currentTime relative to the starting time
+            currentTime = Date().timeIntervalSince1970 - startTime
+
+            // Check if the current time matches the timeElapsed in the recording
+            if currentTime >= recording.timeElapsed {
+                // Execute the noteEvent based on the noteState
+                if recording.noteState {
+                    // Call noteOn method with the playback channel
+                    conductor.instrument.play(noteNumber: MIDINoteNumber(recording.pitchNote.intValue), velocity: 90, channel: playbackChannel)
+                } else {
+                    // Call noteOff method with the playback channel
+                    conductor.instrument.stop(noteNumber: MIDINoteNumber(recording.pitchNote.intValue), channel: playbackChannel)
+                }
+
+                // Move to the next recording in the array
+                currentIndex += 1
+            }
+
+            // Sleep or use an appropriate mechanism to control the loop frequency
+            // to avoid unnecessary CPU usage
+            usleep(10000) // Sleep for 10 milliseconds, adjust as needed
+        }
+    }
+
 }
 
 struct InstrumentEXSView: View, InstrumentEXSDelegate {
@@ -141,6 +184,16 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
                 }
                 
                 Button(action: {
+                    instrumentEXSConductor.playRecording()
+                }) {
+                    Text("Play")
+                        .padding()
+                        .background(Color.teal)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+                
+                Button(action: {
                     self.saveRecordingsToFile()
                 }) {
                     Text("Save Recordings")
@@ -155,6 +208,7 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
             SwiftUIKeyboard(firstOctave: 2, octaveCount: 2, noteOn: instrumentEXSConductor.noteOn(pitch:point:), noteOff: instrumentEXSConductor.noteOff).frame(maxHeight: 600).padding(10)
         }
         .onAppear {
+            instrumentEXSConductor.instrumentEXSViewReference = self
             if(!self.instrumentEXSConductor.conductor.engine.avEngine.isRunning) {
                 Log("Engine Starting")
                 self.instrumentEXSConductor.start()
@@ -221,6 +275,7 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
             instrumentEXSConductor.stopRecording()
         }
     }
+
     
     func saveRecordingsToFile() {
         // Implement logic to save recordings to a text file

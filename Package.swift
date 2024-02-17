@@ -37,7 +37,9 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/AudioKit/AudioKit.git", "5.6.3"..<"6.0.0"),
         .package(url: "https://github.com/AudioKit/AudioKitEX.git", "5.6.0"..<"6.0.0"),
-        .package(url: "https://github.com/AudioKit/Keyboard.git", "1.3.7"..<"2.0.0")
+        .package(url: "https://github.com/AudioKit/Keyboard.git", "1.3.7"..<"2.0.0"),
+        .package(url: "https://github.com/AudioKit/AudioKitUI.git", "0.3.6"..<"1.0.0"),
+        .package(url: "https://github.com/AudioKit/SoundpipeAudioKit.git", "5.6.1"..<"6.0.0")
     ],
     targets: [
         .executableTarget(
@@ -45,7 +47,9 @@ let package = Package(
             dependencies: [
                 .product(name: "AudioKit", package: "audiokit"),
                 .product(name: "AudioKitEX", package: "audiokitex"),
-                .product(name: "Keyboard", package: "keyboard")
+                .product(name: "Keyboard", package: "keyboard"),
+                .product(name: "AudioKitUI", package: "audiokitui"),
+                .product(name: "SoundpipeAudioKit", package: "soundpipeaudiokit")
             ],
             path: "."
         )
