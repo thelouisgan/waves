@@ -3,4 +3,70 @@
    uuid = "5B33E488-D81F-4503-8144-1CCD74597D00"
    type = "1"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "1D67D088-0A1A-4D89-B1B7-0E3DFE1D2FA0"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Conductor.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "36"
+            endingLineNumber = "36"
+            landmarkName = "stop()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "1D67D088-0A1A-4D89-B1B7-0E3DFE1D2FA0 - 7d391bb8130ed9ee"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "waves.Conductor.start() -&gt; ()"
+                  moduleName = "waves"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/louisgan/Documents/Xcode/waves.swiftpm/Conductor.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "37"
+                  endingLineNumber = "37"
+                  offsetFromSymbolStart = "1516">
+               </Location>
+               <Location
+                  uuid = "1D67D088-0A1A-4D89-B1B7-0E3DFE1D2FA0 - 7d391bb8130ed9cd"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "waves.Conductor.start() -&gt; ()"
+                  moduleName = "waves"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/louisgan/Documents/Xcode/waves.swiftpm/Conductor.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "36"
+                  endingLineNumber = "36"
+                  offsetFromSymbolStart = "1136">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "187E53F8-E377-460F-90D7-17377ADC5CB5"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Conductor.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "17"
+            endingLineNumber = "17"
+            landmarkName = "start()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>

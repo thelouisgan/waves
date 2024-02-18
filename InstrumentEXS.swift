@@ -4,8 +4,64 @@ import SwiftUI
 import Keyboard
 import Tonic
 
+import AudioKitEX
+import AudioKitUI
+
 protocol InstrumentEXSDelegate {
     func toggle()
+}
+
+struct RecorderData {
+    var isRecording = false
+    var isPlaying = false
+}
+
+class RecorderConductor: ObservableObject, HasAudioEngine {
+    let engine = AudioEngine()
+    var recorder: NodeRecorder?
+    let player = AudioPlayer()
+    var silencer: Fader?
+    let mixer = Mixer()
+
+    @Published var data = RecorderData() {
+        didSet {
+            if data.isRecording {
+                do {
+                    try recorder?.record()
+                } catch let err {
+                    print(err)
+                }
+            } else {
+                recorder?.stop()
+            }
+
+            if data.isPlaying {
+                if let file = recorder?.audioFile {
+                    try? player.load(file: file)
+                    player.play()
+                }
+            } else {
+                player.stop()
+            }
+        }
+    }
+
+    init() {
+        guard let input = engine.input else {
+            fatalError()
+        }
+
+        do {
+            recorder = try NodeRecorder(node: input)
+        } catch let err {
+            fatalError("\(err)")
+        }
+        let silencer = Fader(input, gain: 0)
+        self.silencer = silencer
+        mixer.addInput(silencer)
+        mixer.addInput(player)
+        engine.output = mixer
+    }
 }
 
 class InstrumentEXSConductor: ObservableObject {
@@ -152,6 +208,7 @@ class InstrumentEXSConductor: ObservableObject {
 }
 
 struct InstrumentEXSView: View, InstrumentEXSDelegate {
+    @StateObject var conductor = RecorderConductor()
     @StateObject var instrumentEXSConductor = InstrumentEXSConductor()
     @Environment(\.scenePhase) var scenePhase
     @Environment(\.colorScheme) var colorScheme
@@ -161,10 +218,21 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
     func toggle() {
         isRecording.toggle()
     }
-    
     var body: some View {
         VStack {
             HStack {
+                Text(conductor.data.isRecording ? "STOP RECORDING" : "RECORD")
+                    .foregroundColor(.blue)
+                    .onTapGesture {
+                    conductor.data.isRecording.toggle()
+                }
+                Spacer()
+                Text(conductor.data.isPlaying ? "STOP" : "PLAY")
+                    .foregroundColor(.blue)
+                    .onTapGesture {
+                    conductor.data.isPlaying.toggle()
+                }
+                Spacer()
                 if isRecording {
                     Text("Recording...")
                         .foregroundColor(.red)
@@ -208,11 +276,15 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
             SwiftUIKeyboard(firstOctave: 2, octaveCount: 2, noteOn: instrumentEXSConductor.noteOn(pitch:point:), noteOff: instrumentEXSConductor.noteOff).frame(maxHeight: 600).padding(10)
         }
         .onAppear {
+            conductor.start()
             instrumentEXSConductor.instrumentEXSViewReference = self
             if(!self.instrumentEXSConductor.conductor.engine.avEngine.isRunning) {
                 Log("Engine Starting")
                 self.instrumentEXSConductor.start()
             }
+        }
+        .onDisappear() {
+            conductor.stop()
         }
         // Background Engine Start & Stop
         .onChange(of: scenePhase) { newPhase in
