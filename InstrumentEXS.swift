@@ -7,6 +7,11 @@ import Tonic
 import AudioKitEX
 import AudioKitUI
 
+import AudioToolbox
+import CoreAudioKit
+
+import CoreMIDI
+
 protocol InstrumentEXSDelegate {
     func toggle()
 }
@@ -18,6 +23,7 @@ struct RecorderData {
 
 class RecorderConductor: ObservableObject, HasAudioEngine {
     let engine = AudioEngine()
+    var sequencer = AppleSequencer()
     var recorder: NodeRecorder?
     let player = AudioPlayer()
     var silencer: Fader?
@@ -64,14 +70,32 @@ class RecorderConductor: ObservableObject, HasAudioEngine {
     }
 }
 
+struct MIDIEvent {
+    let noteNumber: MIDINoteNumber
+    let velocity: MIDIVelocity
+    let position: Duration
+    let duration: Duration
+}
+
+extension Duration {
+    var inBeats: MusicTimeStamp {
+        return MusicTimeStamp(self.seconds * 480.0 / 60.0)  // Assuming 480 ticks per quarter note
+    }
+}
+
+
+
 class InstrumentEXSConductor: ObservableObject {
     @Published var conductor = Conductor()
+    @Published var sequencer: AppleSequencer?
     @Published var currentPitch: Pitch?
     
     @Published var startTime: Date?
     @Published var pitchNote: Pitch?
     @Published var timeElapsed: Double?
     @Published var noteState: Bool?
+    
+    var manager: MusicTrackManager?
     
     var delegate: InstrumentEXSDelegate?
     
@@ -100,6 +124,7 @@ class InstrumentEXSConductor: ObservableObject {
         startTime = Date()
         timer.invalidate()
         
+        
         DispatchQueue.main.async {
             self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
                 self.secondsElapsed = self.secondsElapsed + 1
@@ -115,16 +140,61 @@ class InstrumentEXSConductor: ObservableObject {
     }
     
     func stopRecording() {
+        var midiEvents: [MIDIEvent] = []
+        var tempRecording = RecordingsArray
         startTime = nil
         secondsElapsed = 0
         delegate?.toggle()
         print("recording done")
-        // stopRecording is called twice
+
         for note in RecordingsArray {
             print("Time Elapsed: \(note.timeElapsed), Pitch Note: \(note.pitchNote), Note State: \(note.noteState ? "On" : "Off")")
+
+            if note.noteState == true {
+                for tempPitch in tempRecording {
+                    if note.pitchNote == tempPitch.pitchNote && tempPitch.noteState == false {
+                        let duration = Duration(seconds: tempPitch.timeElapsed - note.timeElapsed)
+                        let position = Duration(seconds: note.timeElapsed)
+                        let midiEvent = MIDIEvent(noteNumber: MIDINoteNumber(note.pitchNote.intValue), velocity: 90, position: position, duration: duration)
+                        midiEvents.append(midiEvent)
+                        break
+                    }
+                }
+            }
         }
-        
+
+        // Create a MIDI file based on MIDI events
+        if let documentsDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let midiFileURL = documentsDirectoryURL.appendingPathComponent("output.mid")
+
+            // Create a MusicSequence
+            var sequence: MusicSequence?
+            NewMusicSequence(&sequence)
+
+            // Create a MusicTrack manually
+            var track: MusicTrack?
+            MusicSequenceNewTrack(sequence!, &track)
+
+            // Add MIDI events to the track
+            for event in midiEvents {
+                MusicTrackNewMIDIEvent(track!, event.position.inBeats, event.noteNumber, event.velocity, event.duration.inBeats)
+            }
+
+            // Save the sequence to a MIDI file
+            var musicData: Unmanaged<CFData>?
+            MusicSequenceFileCreateData(sequence!, .midiType, .eraseFile, 480, &musicData)
+
+            if let data = musicData?.takeRetainedValue() as Data? {
+                do {
+                    try data.write(to: midiFileURL)
+                    print("MIDI file created at: \(midiFileURL)")
+                } catch {
+                    print("Error writing MIDI file: \(error)")
+                }
+            }
+        }
     }
+
     
     func addRecord(keyPress: Pitch, state: Bool) {
         guard let startTime = startTime else { return }
@@ -168,9 +238,15 @@ class InstrumentEXSConductor: ObservableObject {
     }
     
     func playRecording() {
+        
+        if let sequencer = sequencer {
+            sequencer.play()
+        }
+        
         // Implement logic to play the recorded notes
         // conductor.instrument.play(noteNumber: MIDINoteNumber(60), velocity: 90, channel: 0)
 
+        /*
         var currentTime: Double = 0.0
         var currentIndex: Int = 0
 
@@ -202,7 +278,7 @@ class InstrumentEXSConductor: ObservableObject {
             // Sleep or use an appropriate mechanism to control the loop frequency
             // to avoid unnecessary CPU usage
             usleep(10000) // Sleep for 10 milliseconds, adjust as needed
-        }
+        }*/
     }
 
 }
@@ -221,7 +297,7 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
     var body: some View {
         VStack {
             HStack {
-                Text(conductor.data.isRecording ? "STOP RECORDING" : "RECORD")
+                /*Text(conductor.data.isRecording ? "STOP RECORDING" : "RECORD")
                     .foregroundColor(.blue)
                     .onTapGesture {
                     conductor.data.isRecording.toggle()
@@ -231,7 +307,7 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
                     .foregroundColor(.blue)
                     .onTapGesture {
                     conductor.data.isPlaying.toggle()
-                }
+                }*/
                 Spacer()
                 if isRecording {
                     Text("Recording...")
