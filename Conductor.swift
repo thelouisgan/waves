@@ -1,16 +1,11 @@
 import AudioKit
 import AVFoundation
-import AudioToolbox
-
 
 class Conductor: ObservableObject {
 
     let engine = AudioEngine()
     var instrument = MIDISampler(name: "Instrument 1")
     @Published var verb: Reverb
-    
-    //let sequencer = AppleSequencer?
-    
 
     init() {
         verb = Reverb(instrument)
@@ -31,7 +26,6 @@ class Conductor: ObservableObject {
         }
         do {
             try engine.start()
-            //try sequencer.start()
         } catch {
             Log("AudioKit did not start!")
         }

@@ -7,49 +7,65 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "C5E62621-7284-497F-89F6-9B11DF8C9A20"
+            uuid = "1D67D088-0A1A-4D89-B1B7-0E3DFE1D2FA0"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "InstrumentEXS.swift"
+            filePath = "Conductor.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "242"
-            endingLineNumber = "242"
-            landmarkName = "playRecording()"
+            startingLineNumber = "36"
+            endingLineNumber = "36"
+            landmarkName = "stop()"
             landmarkType = "7">
             <Locations>
                <Location
-                  uuid = "C5E62621-7284-497F-89F6-9B11DF8C9A20 - df9ea663e6cff847"
+                  uuid = "1D67D088-0A1A-4D89-B1B7-0E3DFE1D2FA0 - 7d391bb8130ed9ee"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "waves.InstrumentEXSView.init() -&gt; waves.InstrumentEXSView"
+                  symbolName = "waves.Conductor.start() -&gt; ()"
                   moduleName = "waves"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/louisgan/Documents/Xcode/waves.swiftpm/InstrumentEXS.swift"
+                  urlString = "file:///Users/louisgan/Documents/Xcode/waves.swiftpm/Conductor.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "246"
-                  endingLineNumber = "246"
-                  offsetFromSymbolStart = "204">
+                  startingLineNumber = "37"
+                  endingLineNumber = "37"
+                  offsetFromSymbolStart = "1516">
                </Location>
                <Location
-                  uuid = "C5E62621-7284-497F-89F6-9B11DF8C9A20 - 596ddb82a4db6b87"
+                  uuid = "1D67D088-0A1A-4D89-B1B7-0E3DFE1D2FA0 - 7d391bb8130ed9cd"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "waves.InstrumentEXSView.init(conductor: @autoclosure () -&gt; waves.RecorderConductor, instrumentEXSConductor: @autoclosure () -&gt; waves.InstrumentEXSConductor, scenePhase: SwiftUI.Environment&lt;SwiftUI.ScenePhase&gt;, colorScheme: SwiftUI.Environment&lt;SwiftUI.ColorScheme&gt;, backgroundMode: Swift.Bool) -&gt; waves.InstrumentEXSView"
+                  symbolName = "waves.Conductor.start() -&gt; ()"
                   moduleName = "waves"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/louisgan/Documents/Xcode/waves.swiftpm/InstrumentEXS.swift"
+                  urlString = "file:///Users/louisgan/Documents/Xcode/waves.swiftpm/Conductor.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "248"
-                  endingLineNumber = "248"
-                  offsetFromSymbolStart = "204">
+                  startingLineNumber = "36"
+                  endingLineNumber = "36"
+                  offsetFromSymbolStart = "1136">
                </Location>
             </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "187E53F8-E377-460F-90D7-17377ADC5CB5"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Conductor.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "17"
+            endingLineNumber = "17"
+            landmarkName = "start()"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>
