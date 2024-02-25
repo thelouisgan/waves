@@ -132,17 +132,51 @@ class InstrumentEXSConductor: ObservableObject {
             return
         }
 
-        // Play the MIDI note on the keyboard
-        print(midiNoteNumber)
-        conductor.instrument.play(noteNumber: MIDINoteNumber(midiNoteNumber), velocity: 90, channel: 0)
+        // Check if the chord is minor
+        let isMinor = chordRootNote.hasSuffix("m")
+
+        // Build the chord by adding the major or minor third and perfect fifth
+        let chordIntervals: [Int] = isMinor ? [0, 3, 7] : [0, 4, 7]
+
+        // Play each MIDI note in the chord on the keyboard
+        for interval in chordIntervals {
+            let noteNumber = Int(midiNoteNumber) + interval
+            print(noteNumber)
+            conductor.instrument.play(noteNumber: MIDINoteNumber(noteNumber), velocity: 90, channel: 0)
+        }
     }
+
+    func stopChordRootNote(chordRootNote: String) {
+        // Convert the chord root notes to the corresponding MIDI note numbers
+        guard let midiNoteNumber = convertChordRootNoteToMIDI(chordRootNote) else {
+            return
+        }
+
+        // Check if the chord is minor
+        let isMinor = chordRootNote.hasSuffix("m")
+
+        // Build the chord by adding the major or minor third and perfect fifth
+        let chordIntervals: [Int] = isMinor ? [0, 3, 7] : [0, 4, 7]
+
+        // Stop each MIDI note in the chord on the keyboard
+        for interval in chordIntervals {
+            let noteNumber = Int(midiNoteNumber) + interval
+            print(noteNumber)
+            conductor.instrument.stop(noteNumber: MIDINoteNumber(noteNumber), channel: 0)
+        }
+    }
+
 
     // Function to convert chord root note to MIDI note number
     private func convertChordRootNoteToMIDI(_ rootNote: String) -> MIDINoteNumber? {
-        // Your logic to convert chord root note to MIDI note number
-        // For simplicity, assuming C as the base and using a simple mapping
+            // Your logic to convert chord root note to MIDI note number
+            // For simplicity, assuming C as the base and using a simple mapping
         let noteMap: [String: MIDINoteNumber] = [
-            "C": 60, "C#": 61, "D": 62, "D#": 63, "E": 64, "F": 65, "F#": 66, "G": 67, "G#": 68, "A": 69, "A#": 70, "B": 71
+            "C": 48, "C#": 49, "Db": 49, "D": 50, "D#": 51, "Eb": 51, "E": 52, "Fb": 52, "E#": 53, "F": 53, "F#": 54,
+            "Gb": 54, "G": 55, "G#": 56, "Ab": 56, "A": 57, "A#": 58, "Bb": 58, "B": 59, "Cb": 59,
+            
+            "Am": 57, "A#m": 58, "Bbm": 58, "Bm": 59, "Cm": 48, "C#m": 49, "Dbm": 49, "Dm": 50, "D#m": 51, "Ebm": 51, "Em": 52,
+            "Fbm": 52, "E#m": 53, "Fm": 53, "F#m": 54, "Gbm": 54, "Gm": 55, "G#m": 56, "Abm": 56
         ]
 
         return noteMap[rootNote]
@@ -321,7 +355,7 @@ class InstrumentEXSConductor: ObservableObject {
     
     func generateMIDI(midiEvents: [MIDIEvent]) {
         // MIDI header
-        let header: [UInt8] = [0x4D, 0x54, 0x68, 0x64, 
+        let header: [UInt8] = [0x4D, 0x54, 0x68, 0x64,
                                0x00, 0x00, 0x00, 0x06,
                                0x00, 0x00, 0x00, 0x01,
                                0x03, 0xC0]
@@ -502,7 +536,7 @@ class InstrumentEXSConductor: ObservableObject {
 
 struct InstrumentEXSView: View, InstrumentEXSDelegate {
     @StateObject var conductor = RecorderConductor()
-    @StateObject var instrumentEXSConductor = InstrumentEXSConductor()
+    @ObservedObject var instrumentEXSConductor: InstrumentEXSConductor
     @Environment(\.scenePhase) var scenePhase
     @Environment(\.colorScheme) var colorScheme
     @State private var isRecording = false
@@ -565,7 +599,7 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
                 }
             }
             //Spacer()
-            Text("Current Pitch: \(instrumentEXSConductor.currentPitch?.intValue.description ?? "None")")
+            //Text("Current Pitch: \(instrumentEXSConductor.currentPitch?.intValue.description ?? "None")")
             SwiftUIKeyboard(firstOctave: 2, octaveCount: 2, noteOn: instrumentEXSConductor.noteOn(pitch:point:), noteOff: instrumentEXSConductor.noteOff).frame(maxHeight: 600).padding(10)
         }
         .onAppear {
@@ -671,11 +705,11 @@ extension InstrumentEXSConductor: MIDIListener {
     func receivedMIDINotification(notification: MIDINotification) { }
 }
 
-struct InstrumentEXSView_Previews: PreviewProvider {
+/*struct InstrumentEXSView_Previews: PreviewProvider {
     static var previews: some View {
         InstrumentEXSView()
     }
-}
+}*/
 
 class Recordings {
     var startTime: Date

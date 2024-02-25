@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+
 struct KeySelector: View {
     let majorScaleChords: [(keys: String, value: [String])] = [
         ("Ab", ["Ab", "Bbm", "Cm", "Db", "Eb", "Fm", "Gdim"]),
@@ -80,12 +81,12 @@ struct KeySelector: View {
         ("G", ["G", "Am", "Bm", "C", "D", "Em", "F#dim"])
     ]
     
+    @ObservedObject var instrumentEXSConductor: InstrumentEXSConductor
+    
+    @State private var buttonPressed = false
     
     var body: some View {
         VStack {
-            
-            
-            
             Text("Choose a genre:")
             Picker("Genre", selection: $selectedGenre) {
                 ForEach(Array(chordProgressionsDictionary.keys), id: \.self) {
@@ -131,7 +132,7 @@ struct KeySelector: View {
              .cornerRadius(10)
              }*/
             
-            @StateObject var instrumentEXSConductor = InstrumentEXSConductor()
+            
             
             // Display the generated chord progression
             if let chordProgression = getChordProgression() {
@@ -139,24 +140,38 @@ struct KeySelector: View {
                     .padding()
 
                 LazyVGrid(columns: Array(repeating: GridItem(), count: chordProgression.components(separatedBy: " - ").count), spacing: 10) {
-                    ForEach(chordProgression.components(separatedBy: " - "), id: \.self) { chord in
-                        Button(action: {
-                            print("Button pressed!")
-                            // Pass the chord root note to the conductor to play on the keyboard
-                            instrumentEXSConductor.playChordRootNote(chordRootNote: chord)
-                        }) {
-                            Text(chord)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
+                                ForEach(chordProgression.components(separatedBy: " - "), id: \.self) { chord in
+                                    Button(action: {
+                                        self.buttonPressed = true
+                                        print("Button pressed!")
+                                        // Pass the chord root note to the conductor to play on the keyboard
+                                        instrumentEXSConductor.stopChordRootNote(chordRootNote: chord)
+                                    }) {
+                                        Text(chord)
+                                            .padding()
+                                            .frame(maxWidth: .infinity)
+                                            .background(Color.blue)
+                                            .foregroundColor(.white)
+                                            .cornerRadius(10)
+                                    }
+                                    .onTapGesture(count: 1, perform: {
+                                        // Stop the chord root note when the button is tapped
+                                        instrumentEXSConductor.playChordRootNote(chordRootNote: chord)
+                                    })
+                                    .simultaneousGesture(
+                                        LongPressGesture(minimumDuration: 0)
+                                            .onChanged { _ in
+                                                // Do nothing on press
+                                            }
+                                            .onEnded { _ in
+                                                // Stop the chord root note when the button is lifted
+                                                instrumentEXSConductor.playChordRootNote(chordRootNote: chord)
+                                            }
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-            }
-
-        }
         .padding()
     }
     

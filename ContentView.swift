@@ -8,6 +8,8 @@ import AudioToolbox
 
 
 struct ContentView: View {
+    @StateObject var instrumentEXSConductor = InstrumentEXSConductor()
+    
     var body: some View {
         
         
@@ -38,8 +40,8 @@ struct ContentView: View {
         
         VStack {
             
-            KeySelector()
-            InstrumentEXSView()
+            KeySelector(instrumentEXSConductor: instrumentEXSConductor)
+            InstrumentEXSView(instrumentEXSConductor: instrumentEXSConductor)
         }
     }
     
