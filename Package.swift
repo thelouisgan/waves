@@ -54,7 +54,10 @@ let package = Package(
                 .product(name: "AudioKitUI", package: "audiokitui"),
                 .product(name: "SoundpipeAudioKit", package: "soundpipeaudiokit")
             ],
-            path: "."
+            path: ".",
+            resources: [
+                .process("Resources")
+            ]
         )
     ]
 )

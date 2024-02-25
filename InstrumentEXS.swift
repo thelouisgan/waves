@@ -7,6 +7,13 @@ import Tonic
 import AudioKitEX
 import AudioKitUI
 
+import AudioToolbox
+import CoreAudioKit
+
+import CoreMIDI
+
+import Foundation
+
 protocol InstrumentEXSDelegate {
     func toggle()
 }
@@ -18,6 +25,7 @@ struct RecorderData {
 
 class RecorderConductor: ObservableObject, HasAudioEngine {
     let engine = AudioEngine()
+    var sequencer = AppleSequencer()
     var recorder: NodeRecorder?
     let player = AudioPlayer()
     var silencer: Fader?
@@ -64,14 +72,32 @@ class RecorderConductor: ObservableObject, HasAudioEngine {
     }
 }
 
+struct MIDIEvent {
+    let noteNumber: MIDINoteNumber
+    let velocity: MIDIVelocity
+    let position: Duration
+    let duration: Duration
+}
+
+extension Duration {
+    var inBeats: MusicTimeStamp {
+        return MusicTimeStamp(self.seconds * 480.0 / 60.0)  // Assuming 480 ticks per quarter note
+    }
+}
+
+
+
 class InstrumentEXSConductor: ObservableObject {
     @Published var conductor = Conductor()
+    @Published var sequencer: AppleSequencer?
     @Published var currentPitch: Pitch?
     
     @Published var startTime: Date?
     @Published var pitchNote: Pitch?
     @Published var timeElapsed: Double?
     @Published var noteState: Bool?
+    
+    var manager: MusicTrackManager?
     
     var delegate: InstrumentEXSDelegate?
     
@@ -100,6 +126,7 @@ class InstrumentEXSConductor: ObservableObject {
         startTime = Date()
         timer.invalidate()
         
+        
         DispatchQueue.main.async {
             self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
                 self.secondsElapsed = self.secondsElapsed + 1
@@ -115,16 +142,207 @@ class InstrumentEXSConductor: ObservableObject {
     }
     
     func stopRecording() {
+        var midiEvents: [MIDIEvent] = []
+        let tempRecording = RecordingsArray
         startTime = nil
         secondsElapsed = 0
         delegate?.toggle()
         print("recording done")
-        // stopRecording is called twice
+
         for note in RecordingsArray {
             print("Time Elapsed: \(note.timeElapsed), Pitch Note: \(note.pitchNote), Note State: \(note.noteState ? "On" : "Off")")
+
+            if note.noteState == true {
+                for tempPitch in tempRecording {
+                    if note.pitchNote == tempPitch.pitchNote && tempPitch.noteState == false {
+                        let duration = Duration(seconds: tempPitch.timeElapsed - note.timeElapsed)
+                        let position = Duration(seconds: note.timeElapsed)
+                        let midiEvent = MIDIEvent(noteNumber: MIDINoteNumber(note.pitchNote.intValue), velocity: 90, position: position, duration: duration)
+                        midiEvents.append(midiEvent)
+                        break
+                    }
+                }
+            }
         }
+        generateMIDI()
+
+        // Create a MIDI file based on MIDI events
         
+        // Helper function to encode variable length quantity (VLQ)
+        func encodeVariableLengthQuantity(_ value: UInt32) -> [UInt8] {
+            var buffer: [UInt8] = []
+            var val = value
+            repeat {
+                var byte = UInt8(val & 0x7F)
+                val >>= 7
+                if val > 0 {
+                    byte |= 0x80
+                }
+                buffer.insert(byte, at: 0)
+            } while val > 0
+            return buffer
+        }
+
+        func generateMIDI() {
+            // MIDI header
+            let header: [UInt8] = [0x4D, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01, 0xE0]
+
+            // MIDI track
+            let track: [UInt8] = [
+                0x4D, 0x54, 0x72, 0x6B, 0x00, 0x00, 0x00, 0x74,
+                0x00, 0xFF, 0x58, 0x04, 0x04, 0x02, 0x18, 0x08,
+                0x00, 0xFF, 0x51, 0x03, 0x09, 0x89, 0x68,
+                0x00, 0x90, 0x3C, 0x40, 0x00, 0x40, 0x40, 0x00, 0x43, 0x40, 0x87, 0x40,
+                0x80, 0x3C, 0x3C, 0x00, 0x40, 0x00, 0x00, 0x43, 0x00, 0x87, 0x40,
+                0x90, 0x3C, 0x40, 0x00, 0x40, 0x40, 0x00, 0x43, 0x40, 0x87, 0x40,
+                0x80, 0x3C, 0x3C, 0x00, 0x40, 0x00, 0x00, 0x43, 0x00, 0x87, 0x40,
+                0x90, 0x3C, 0x40, 0x00, 0x40, 0x40, 0x00, 0x43, 0x40, 0x87, 0x40,
+                0x80, 0x3C, 0x3C, 0x00, 0x40, 0x00, 0x00, 0x43, 0x00, 0x87, 0x40,
+                0x90, 0x3C, 0x40, 0x00, 0x40, 0x40, 0x00, 0x43, 0x40, 0x87, 0x40,
+                0x80, 0x3C, 0x3C, 0x00, 0x40, 0x00, 0x00, 0x43, 0x00, 0x87, 0x40,
+                0xFF, 0x2F, 0x00
+            ]
+
+            // Concatenate header and track
+            let midiData = Data(header + track)
+
+            // Write to file
+            do {
+                if let url = Bundle.main.url(forResource: "output", withExtension: "mid") {
+                    try midiData.write(to: url)
+                    print("MIDI file created successfully at: \(url.path)")
+                } else {
+                    print("Error: MIDI file URL not found")
+                }
+            } catch {
+                print("Error creating MIDI file: \(error)")
+            }
+        }
+
+        /*
+        func generateMIDI() {
+            // Define MIDI constants
+            /*let ticksPerQuarterNote: UInt16 = 480 // Adjust this based on your needs
+            let division: UInt16 = 0x8000 | ticksPerQuarterNote
+            let divisionBytes: [UInt8] = [UInt8((division >> 8) & 0xFF), UInt8(division & 0xFF)]
+            let tempo: UInt32 = 60000000 / UInt32(96) // Convert BPM to microseconds per quarter note
+            
+            // MIDI file header
+            var header: [UInt8] = [
+                0x4D, 0x54, 0x68, 0x64, // "MThd" Chunk Type
+                0x00, 0x00, 0x00, 0x06, // Chunk Length (6 bytes)
+                0x00, 0x00,             // Format Type (0 for single track, 1 for multiple tracks)
+                0x00, 0x01,             // Number of Tracks
+            ] + divisionBytes*/
+            
+            let BPM: UInt32 = 96
+            let totalBeats: UInt32 = 16
+            let division: UInt16 = 480
+            let tempo: UInt32 = 60000000 / UInt32(96) // Convert BPM to microseconds per quarter note
+
+            let ticksPerQuarterNote = (BPM * totalBeats * UInt32(division)) / 60
+            let divisionBytes: [UInt8] = [UInt8((division >> 8) & 0xFF), UInt8(division & 0xFF)]
+
+            var header: [UInt8] = [
+                0x4D, 0x54, 0x68, 0x64, // "MThd" Chunk Type
+                0x00, 0x00, 0x00, 0x06, // Chunk Length (6 bytes)
+                0x00, 0x00,             // Format Type (0 for single track, 1 for multiple tracks)
+                0x00, 0x01,             // Number of Tracks
+            ] + divisionBytes
+
+            
+            // Tempo event (assuming it's a meta event)
+                let microsecondsPerQuarterNoteEvent: [UInt8] = [
+                    0x00, 0xFF, 0x51, 0x03, // Meta event type 0xFF (tempo)
+                    UInt8((tempo >> 16) & 0xFF),
+                    UInt8((tempo >> 8) & 0xFF),
+                    UInt8(tempo & 0xFF)
+                ]
+            
+            
+            // MIDI track chunk
+            var track: [UInt8] = [
+                0x4D, 0x54, 0x72, 0x6B, // Chunk type (MTrk)
+                0x00, 0x00, 0x00, 0x00, // Placeholder for chunk length
+            ]
+            
+            for recording in RecordingsArray {
+                // Note-on event
+                let noteOnEvent: [UInt8] = [
+                    0x00, 0x90, UInt8(recording.pitchNote.intValue), 0x64 // Adjust velocity as needed
+                ]
+                // Delta time (duration of the note)
+                let noteDurationTicks: UInt32 = UInt32(recording.timeElapsed * Double(ticksPerQuarterNote))
+                track += encodeVariableLengthQuantity(noteDurationTicks)
+                track += noteOnEvent
+
+                // Note-off event
+                let noteOffEvent: [UInt8] = [
+                    0x00, 0x80, UInt8(recording.pitchNote.intValue), 0x00
+                ]
+                // Delta time (you can adjust this based on your needs)
+                let releaseTicks: UInt32 = UInt32(100) // Release time in ticks
+                track += encodeVariableLengthQuantity(releaseTicks)
+                track += noteOffEvent
+            }
+            
+            // End of track event
+            track += [0x00, 0xFF, 0x2F, 0x00]
+            
+            // Calculate track length
+            let trackLength: UInt32 = UInt32(track.count - 8)
+            track[4] = UInt8(trackLength >> 24)
+            track[5] = UInt8((trackLength >> 16) & 0xFF)
+            track[6] = UInt8((trackLength >> 8) & 0xFF)
+            track[7] = UInt8(trackLength & 0xFF)
+            
+            // Combine header and track chunks
+            var midiData = Data(header + microsecondsPerQuarterNoteEvent + track)
+            
+            // Write MIDI data to file
+            do {
+                if let url = Bundle.main.url(forResource: "output", withExtension: "mid") {
+                    try midiData.write(to: url)
+                    print("MIDI file created successfully at: \(url.path)")
+                } else {
+                    print("Error: MIDI file URL not found")
+                }
+            } catch {
+                print("Error creating MIDI file: \(error)")
+            }
+        }*/
+        
+        /*if let documentsDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let midiFileURL = documentsDirectoryURL.appendingPathComponent("output.mid")
+
+            // Create a MusicSequence
+            var sequence: MusicSequence?
+            NewMusicSequence(&sequence)
+
+            // Create a MusicTrack manually
+            var track: MusicTrack?
+            MusicSequenceNewTrack(sequence!, &track)
+
+            // Add MIDI events to the track
+            for event in midiEvents {
+                MusicTrackNewMIDIEvent(track!, event.position.inBeats, event.noteNumber, event.velocity, event.duration.inBeats)
+            }
+
+            // Save the sequence to a MIDI file
+            var musicData: Unmanaged<CFData>?
+            MusicSequenceFileCreateData(sequence!, .midiType, .eraseFile, 480, &musicData)
+
+            if let data = musicData?.takeRetainedValue() as Data? {
+                do {
+                    try data.write(to: midiFileURL)
+                    print("MIDI file created at: \(midiFileURL)")
+                } catch {
+                    print("Error writing MIDI file: \(error)")
+                }
+            }
+        }*/
     }
+
     
     func addRecord(keyPress: Pitch, state: Bool) {
         guard let startTime = startTime else { return }
@@ -168,9 +386,15 @@ class InstrumentEXSConductor: ObservableObject {
     }
     
     func playRecording() {
+        
+        if let sequencer = sequencer {
+            sequencer.play()
+        }
+        
         // Implement logic to play the recorded notes
         // conductor.instrument.play(noteNumber: MIDINoteNumber(60), velocity: 90, channel: 0)
 
+        /*
         var currentTime: Double = 0.0
         var currentIndex: Int = 0
 
@@ -202,7 +426,7 @@ class InstrumentEXSConductor: ObservableObject {
             // Sleep or use an appropriate mechanism to control the loop frequency
             // to avoid unnecessary CPU usage
             usleep(10000) // Sleep for 10 milliseconds, adjust as needed
-        }
+        }*/
     }
 
 }
@@ -221,7 +445,7 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
     var body: some View {
         VStack {
             HStack {
-                Text(conductor.data.isRecording ? "STOP RECORDING" : "RECORD")
+                /*Text(conductor.data.isRecording ? "STOP RECORDING" : "RECORD")
                     .foregroundColor(.blue)
                     .onTapGesture {
                     conductor.data.isRecording.toggle()
@@ -231,7 +455,7 @@ struct InstrumentEXSView: View, InstrumentEXSDelegate {
                     .foregroundColor(.blue)
                     .onTapGesture {
                     conductor.data.isPlaying.toggle()
-                }
+                }*/
                 Spacer()
                 if isRecording {
                     Text("Recording...")
@@ -397,5 +621,4 @@ class Recordings {
         self.noteState = noteState
     }
 }
-
 

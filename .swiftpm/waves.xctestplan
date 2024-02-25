@@ -1,0 +1,23 @@
+{
+  "configurations" : [
+    {
+      "id" : "71B319F6-6F3F-4508-A783-0F076613746C",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:",
+      "identifier" : "waves",
+      "name" : "waves"
+    }
+  },
+  "testTargets" : [
+
+  ],
+  "version" : 1
+}
