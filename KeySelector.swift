@@ -131,11 +131,31 @@ struct KeySelector: View {
              .cornerRadius(10)
              }*/
             
+            @StateObject var instrumentEXSConductor = InstrumentEXSConductor()
+            
             // Display the generated chord progression
             if let chordProgression = getChordProgression() {
-                Text("Chord Progression: \(chordProgression)")
+                Text("Chord Progression:")
                     .padding()
+
+                LazyVGrid(columns: Array(repeating: GridItem(), count: chordProgression.components(separatedBy: " - ").count), spacing: 10) {
+                    ForEach(chordProgression.components(separatedBy: " - "), id: \.self) { chord in
+                        Button(action: {
+                            print("Button pressed!")
+                            // Pass the chord root note to the conductor to play on the keyboard
+                            instrumentEXSConductor.playChordRootNote(chordRootNote: chord)
+                        }) {
+                            Text(chord)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                        }
+                    }
+                }
             }
+
         }
         .padding()
     }

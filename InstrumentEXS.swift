@@ -96,6 +96,12 @@ class InstrumentEXSConductor: ObservableObject {
     @Published var pitchNote: Pitch?
     @Published var timeElapsed: Double?
     @Published var noteState: Bool?
+    struct MIDIEvent {
+        let noteNumber: MIDINoteNumber
+        let velocity: UInt8
+        let position: Duration
+        let duration: Duration
+    }
     
     var manager: MusicTrackManager?
     
@@ -120,6 +126,29 @@ class InstrumentEXSConductor: ObservableObject {
         addRecord(keyPress: pitch, state: false)
     }
     
+    func playChordRootNote(chordRootNote: String) {
+            // Convert the chord root note to the corresponding MIDI note number
+            guard let midiNoteNumber = convertChordRootNoteToMIDI(chordRootNote) else {
+                return
+            }
+
+            // Play the MIDI note on the keyboard
+            print(midiNoteNumber)
+            conductor.instrument.play(noteNumber: MIDINoteNumber(midiNoteNumber), velocity: 90, channel: 0)
+            }
+
+        // Function to convert chord root note to MIDI note number
+        private func convertChordRootNoteToMIDI(_ rootNote: String) -> MIDINoteNumber? {
+            // Your logic to convert chord root note to MIDI note number
+            // For simplicity, assuming C as the base and using a simple mapping
+            let noteMap: [String: MIDINoteNumber] = [
+                "C": 60, "C#": 61, "D": 62, "D#": 63, "E": 64, "F": 65, "F#": 66,
+                "G": 67, "G#": 68, "A": 69, "A#": 70, "B": 71
+            ]
+
+            return noteMap[rootNote]
+        }
+    
     var instrumentEXSViewReference: InstrumentEXSView?
     
     func startRecording() {
@@ -143,7 +172,7 @@ class InstrumentEXSConductor: ObservableObject {
     
     func stopRecording() {
         var midiEvents: [MIDIEvent] = []
-        let tempRecording = RecordingsArray
+        var tempRecording = RecordingsArray
         startTime = nil
         secondsElapsed = 0
         delegate?.toggle()
@@ -164,60 +193,8 @@ class InstrumentEXSConductor: ObservableObject {
                 }
             }
         }
-        generateMIDI()
-
-        // Create a MIDI file based on MIDI events
-        
-        // Helper function to encode variable length quantity (VLQ)
-        func encodeVariableLengthQuantity(_ value: UInt32) -> [UInt8] {
-            var buffer: [UInt8] = []
-            var val = value
-            repeat {
-                var byte = UInt8(val & 0x7F)
-                val >>= 7
-                if val > 0 {
-                    byte |= 0x80
-                }
-                buffer.insert(byte, at: 0)
-            } while val > 0
-            return buffer
-        }
-
-        func generateMIDI() {
-            // MIDI header
-            let header: [UInt8] = [0x4D, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01, 0xE0]
-
-            // MIDI track
-            let track: [UInt8] = [
-                0x4D, 0x54, 0x72, 0x6B, 0x00, 0x00, 0x00, 0x74,
-                0x00, 0xFF, 0x58, 0x04, 0x04, 0x02, 0x18, 0x08,
-                0x00, 0xFF, 0x51, 0x03, 0x09, 0x89, 0x68,
-                0x00, 0x90, 0x3C, 0x40, 0x00, 0x40, 0x40, 0x00, 0x43, 0x40, 0x87, 0x40,
-                0x80, 0x3C, 0x3C, 0x00, 0x40, 0x00, 0x00, 0x43, 0x00, 0x87, 0x40,
-                0x90, 0x3C, 0x40, 0x00, 0x40, 0x40, 0x00, 0x43, 0x40, 0x87, 0x40,
-                0x80, 0x3C, 0x3C, 0x00, 0x40, 0x00, 0x00, 0x43, 0x00, 0x87, 0x40,
-                0x90, 0x3C, 0x40, 0x00, 0x40, 0x40, 0x00, 0x43, 0x40, 0x87, 0x40,
-                0x80, 0x3C, 0x3C, 0x00, 0x40, 0x00, 0x00, 0x43, 0x00, 0x87, 0x40,
-                0x90, 0x3C, 0x40, 0x00, 0x40, 0x40, 0x00, 0x43, 0x40, 0x87, 0x40,
-                0x80, 0x3C, 0x3C, 0x00, 0x40, 0x00, 0x00, 0x43, 0x00, 0x87, 0x40,
-                0xFF, 0x2F, 0x00
-            ]
-
-            // Concatenate header and track
-            let midiData = Data(header + track)
-
-            // Write to file
-            do {
-                if let url = Bundle.main.url(forResource: "output", withExtension: "mid") {
-                    try midiData.write(to: url)
-                    print("MIDI file created successfully at: \(url.path)")
-                } else {
-                    print("Error: MIDI file URL not found")
-                }
-            } catch {
-                print("Error creating MIDI file: \(error)")
-            }
-        }
+        // Call the function to generate and write the MIDI file
+        generateMIDI(midiEvents: midiEvents)
 
         /*
         func generateMIDI() {
@@ -341,6 +318,78 @@ class InstrumentEXSConductor: ObservableObject {
                 }
             }
         }*/
+    }
+    
+    func generateMIDI(midiEvents: [MIDIEvent]) {
+        // MIDI header
+        let header: [UInt8] = [0x4D, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01, 0xE0]
+
+        // MIDI track
+        var track: [UInt8] = [
+            0x4D, 0x54, 0x72, 0x6B, 0x00, 0x00, 0x00, 0x00  // Placeholder for track length (to be updated later)
+        ]
+
+        // Variable to keep track of the total length of the track
+        var trackLength: UInt32 = 0
+
+        // Iterate through the provided MIDI events and convert them to MIDI bytes
+        for midiEvent in midiEvents {
+            let deltaTime: UInt32 = UInt32(midiEvent.position.seconds * 480)  // Assuming 480 ticks per quarter note
+            let deltaTimeBytes = withUnsafeBytes(of: deltaTime.bigEndian) { Array($0) }
+            track += encodeVariableLengthQuantity(UInt32(deltaTimeBytes.count))
+            track += [0x90, midiEvent.noteNumber, midiEvent.velocity]  // Note On event
+            track += deltaTimeBytes
+            trackLength += UInt32(3 + deltaTimeBytes.count)
+
+            let noteOffTime: UInt32 = UInt32(midiEvent.duration.seconds * 480)
+            let noteOffTimeBytes = withUnsafeBytes(of: noteOffTime.bigEndian) { Array($0) }
+            track += encodeVariableLengthQuantity(UInt32(noteOffTimeBytes.count))
+            track += [0x80, midiEvent.noteNumber, 0x00]  // Note Off event
+            track += noteOffTimeBytes
+            trackLength += UInt32(3 + noteOffTimeBytes.count)
+            
+            
+        }
+
+        
+        // Update the track length in the header
+        let trackLengthBytes = withUnsafeBytes(of: trackLength.bigEndian) { Array($0) }
+        track[7..<11] = trackLengthBytes[0..<4]
+        
+        let endOfTrackEvent: [UInt8] = [0x00, 0xFF, 0x2F, 0x00]
+        track += endOfTrackEvent
+
+        // Concatenate header and track
+        let midiData = Data(header + track)
+
+        // Write to file
+        do {
+            if let url = Bundle.main.url(forResource: "output", withExtension: "mid") {
+                try midiData.write(to: url)
+                print("MIDI file created successfully at: \(url.path)")
+            } else {
+                print("Error: MIDI file URL not found")
+            }
+        } catch {
+            print("Error creating MIDI file: \(error)")
+        }
+    }
+
+    // Function to encode variable-length quantities for delta times
+    func encodeVariableLengthQuantity(_ value: UInt32) -> [UInt8] {
+        var result: [UInt8] = []
+        
+        var val = value
+        repeat {
+            var byte = UInt8(val & 0x7F)
+            val >>= 7
+            if val != 0 {
+                byte |= 0x80
+            }
+            result.append(byte)
+        } while val != 0
+        
+        return result.reversed()
     }
 
     
