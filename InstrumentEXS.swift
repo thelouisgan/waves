@@ -127,28 +127,27 @@ class InstrumentEXSConductor: ObservableObject {
     }
     
     func playChordRootNote(chordRootNote: String) {
-            // Convert the chord root note to the corresponding MIDI note number
-            guard let midiNoteNumber = convertChordRootNoteToMIDI(chordRootNote) else {
-                return
-            }
-
-            // Play the MIDI note on the keyboard
-            print(midiNoteNumber)
-            conductor.instrument.play(noteNumber: MIDINoteNumber(midiNoteNumber), velocity: 90, channel: 0)
-            }
-
-        // Function to convert chord root note to MIDI note number
-        private func convertChordRootNoteToMIDI(_ rootNote: String) -> MIDINoteNumber? {
-            // Your logic to convert chord root note to MIDI note number
-            // For simplicity, assuming C as the base and using a simple mapping
-            let noteMap: [String: MIDINoteNumber] = [
-                "C": 60, "C#": 61, "D": 62, "D#": 63, "E": 64, "F": 65, "F#": 66,
-                "G": 67, "G#": 68, "A": 69, "A#": 70, "B": 71
-            ]
-
-            return noteMap[rootNote]
+        // Convert the chord root note to the corresponding MIDI note number
+        guard let midiNoteNumber = convertChordRootNoteToMIDI(chordRootNote) else {
+            return
         }
-    
+
+        // Play the MIDI note on the keyboard
+        print(midiNoteNumber)
+        conductor.instrument.play(noteNumber: MIDINoteNumber(midiNoteNumber), velocity: 90, channel: 0)
+    }
+
+    // Function to convert chord root note to MIDI note number
+    private func convertChordRootNoteToMIDI(_ rootNote: String) -> MIDINoteNumber? {
+        // Your logic to convert chord root note to MIDI note number
+        // For simplicity, assuming C as the base and using a simple mapping
+        let noteMap: [String: MIDINoteNumber] = [
+            "C": 60, "C#": 61, "D": 62, "D#": 63, "E": 64, "F": 65, "F#": 66, "G": 67, "G#": 68, "A": 69, "A#": 70, "B": 71
+        ]
+
+        return noteMap[rootNote]
+    }
+
     var instrumentEXSViewReference: InstrumentEXSView?
     
     func startRecording() {
@@ -322,12 +321,14 @@ class InstrumentEXSConductor: ObservableObject {
     
     func generateMIDI(midiEvents: [MIDIEvent]) {
         // MIDI header
-        let header: [UInt8] = [0x4D, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01, 0xE0]
+        let header: [UInt8] = [0x4D, 0x54, 0x68, 0x64, 
+                               0x00, 0x00, 0x00, 0x06,
+                               0x00, 0x00, 0x00, 0x01,
+                               0x03, 0xC0]
 
         // MIDI track
-        var track: [UInt8] = [
-            0x4D, 0x54, 0x72, 0x6B, 0x00, 0x00, 0x00, 0x00  // Placeholder for track length (to be updated later)
-        ]
+        var track: [UInt8] = [0x4D, 0x54, 0x72, 0x6B,
+                              0x00, 0x00, 0x00, 0x00,]
 
         // Variable to keep track of the total length of the track
         var trackLength: UInt32 = 0
@@ -339,22 +340,41 @@ class InstrumentEXSConductor: ObservableObject {
             track += encodeVariableLengthQuantity(UInt32(deltaTimeBytes.count))
             track += [0x90, midiEvent.noteNumber, midiEvent.velocity]  // Note On event
             track += deltaTimeBytes
-            trackLength += UInt32(3 + deltaTimeBytes.count)
+            trackLength += UInt32(deltaTimeBytes.count)
 
             let noteOffTime: UInt32 = UInt32(midiEvent.duration.seconds * 480)
             let noteOffTimeBytes = withUnsafeBytes(of: noteOffTime.bigEndian) { Array($0) }
             track += encodeVariableLengthQuantity(UInt32(noteOffTimeBytes.count))
             track += [0x80, midiEvent.noteNumber, 0x00]  // Note Off event
             track += noteOffTimeBytes
-            trackLength += UInt32(3 + noteOffTimeBytes.count)
-            
-            
+            trackLength += UInt32(noteOffTimeBytes.count)
         }
 
         
         // Update the track length in the header
-        let trackLengthBytes = withUnsafeBytes(of: trackLength.bigEndian) { Array($0) }
-        track[7..<11] = trackLengthBytes[0..<4]
+        var trackLengthBytes = withUnsafeBytes(of: trackLength.bigEndian) { Array($0) }
+        
+        // Ensure the array has at least 4 bytes
+        if trackLengthBytes.count >= 4 {
+            // Add 4 to the last byte, considering carry
+            var sum = UInt16(trackLengthBytes[3]) + 4
+            trackLengthBytes[3] = UInt8(sum & 0xFF)  // Set the updated value
+
+            if sum > 0xFF {
+                // Propagate carry to higher bytes
+                for i in (0..<3).reversed() {
+                    sum = UInt16(trackLengthBytes[i]) + 1
+                    trackLengthBytes[i] = UInt8(sum & 0xFF)
+
+                    // If there's no more carry, break out of the loop
+                    if sum <= 0xFF {
+                        break
+                    }
+                }
+            }
+        }
+        print(trackLengthBytes)
+        track[4..<8] = trackLengthBytes[0..<4]
         
         let endOfTrackEvent: [UInt8] = [0x00, 0xFF, 0x2F, 0x00]
         track += endOfTrackEvent
